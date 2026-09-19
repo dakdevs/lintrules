@@ -1,5 +1,5 @@
 {
-  "name": "lintrules",
+  "name": "@dakdevs/lintrules",
   "version": "1.0.0",
   "description": "Semantic code rules evaluated with Jev",
   "license": "MIT",

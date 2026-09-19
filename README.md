@@ -20,7 +20,7 @@ Or install the npm package, which bundles the Cargo workspace and requires
 [Cargo](https://rustup.rs/) when the command runs:
 
 ```sh
-npm install --global lintrules
+npm install --global @dakdevs/lintrules
 lintrules
 ```
 
@@ -61,7 +61,7 @@ exists instead of tracking `main`.
 
 Run **Publish npm release** from the Actions tab with the semantic version to
 publish; it defaults to `1.0.0`. Add an `NPM_TOKEN` repository secret from the
-npm account that owns `lintrules`. The workflow tests, publishes, commits the
+npm account that owns `@dakdevs/lintrules`. The workflow tests, publishes, commits the
 version, tags it, and creates the matching GitHub release.
 
 The repository is a Cargo workspace: `crates/lintrules` contains the CLI and
