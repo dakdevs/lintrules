@@ -10,6 +10,12 @@ lintrules init --provider cloudflare
 lintrules
 ```
 
+Install directly from this repository with Cargo:
+
+```sh
+cargo install --git https://github.com/dakdevs/lintrules.git --locked --package lintrules
+```
+
 Or install the npm package, which bundles the Cargo workspace and requires
 [Cargo](https://rustup.rs/) when the command runs:
 
@@ -17,6 +23,46 @@ Or install the npm package, which bundles the Cargo workspace and requires
 npm install --global lintrules
 lintrules
 ```
+
+## GitHub Action
+
+The repository root is a composite GitHub Action. It runs Lintrules once,
+converts each finding into a GitHub error annotation, and preserves the precise
+line when Jev identified one. File-level findings create file annotations.
+
+```yaml
+name: Lintrules
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dakdevs/lintrules@main
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+```
+
+Set `fail-on-findings: "false"` to keep annotations while allowing the job to
+succeed. Use a release tag such as `dakdevs/lintrules@v20260918.1.0` once a
+release exists instead of tracking `main`.
+
+## Releases
+
+Run **Publish npm release** from the Actions tab with the semantic version to
+publish; it defaults to `1.0.0`. Add an `NPM_TOKEN` repository secret from the
+npm account that owns `lintrules`. The workflow tests, publishes, commits the
+version, tags it, and creates the matching GitHub release.
 
 The repository is a Cargo workspace: `crates/lintrules` contains the CLI and
 `crates/lintrules-core` contains rule loading, scanning, caching, and provider

@@ -1,0 +1,85 @@
+name: Publish npm release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: npm semantic version to publish.
+        required: true
+        default: 1.0.0
+        type: string
+      npm_tag:
+        description: npm distribution tag.
+        required: true
+        default: latest
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Set release version
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          npm version "$VERSION" --no-git-tag-version
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          manifest = Path("Cargo.toml")
+          contents = manifest.read_text()
+          updated = re.sub(
+              r'^version = "[^"]+"$',
+              f'version = "{os.environ["VERSION"]}"',
+              contents,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          if updated == contents:
+              raise SystemExit("could not update workspace package version")
+          manifest.write_text(updated)
+          PY
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Test release package
+        run: cargo test
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TAG: ${{ inputs.npm_tag }}
+        run: npm publish --access public --tag "$NPM_TAG"
+      - name: Tag and push release
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml package.json
+          git commit -m "Release v$VERSION"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin HEAD:main --follow-tags
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: gh release create "v$VERSION" --title "v$VERSION" --generate-notes

@@ -1,0 +1,23 @@
+{
+  "findings": [
+    {
+      "kind": "violation",
+      "title": "Functional Effect",
+      "rule": "effect-functional",
+      "path": "src/effect.ts",
+      "line": 42,
+      "probability": 0.98,
+      "message": "Jev found a violation on this line."
+    },
+    {
+      "kind": "violation",
+      "title": "Inline validation",
+      "rule": "inline-validation",
+      "path": "src/forms.tsx",
+      "line": null,
+      "probability": 0.96,
+      "message": "Jev found a file-level violation."
+    }
+  ],
+  "skipped": []
+}

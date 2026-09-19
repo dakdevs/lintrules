@@ -1,0 +1,74 @@
+name: Lintrules
+description: Run Lintrules and publish semantic-rule findings as GitHub annotations.
+author: Dak Devels
+
+inputs:
+  working-directory:
+    description: Directory that contains lintrules.config.json and .lintrules/.
+    required: false
+    default: .
+  config:
+    description: Path to lintrules.config.json, relative to the working directory.
+    required: false
+  base:
+    description: Git base revision used to report only introduced findings.
+    required: false
+  working-tree:
+    description: Include or committed; overrides the matching config setting.
+    required: false
+  no-cache:
+    description: Set to true to bypass Lintrules' Jev result cache.
+    required: false
+    default: "false"
+  fail-on-findings:
+    description: Set to false to report findings without failing the action.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Install Lintrules
+      shell: bash
+      run: |
+        set -euo pipefail
+        install_root="$RUNNER_TEMP/lintrules"
+        cargo install --path "$GITHUB_ACTION_PATH/crates/lintrules" --locked --root "$install_root"
+        echo "$install_root/bin" >> "$GITHUB_PATH"
+    - name: Check rules
+      id: check
+      shell: bash
+      env:
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_WORKING_TREE: ${{ inputs.working-tree }}
+        INPUT_NO_CACHE: ${{ inputs.no-cache }}
+      run: |
+        set -uo pipefail
+        args=(--format json)
+        if [[ -n "$INPUT_CONFIG" ]]; then args+=(--config "$INPUT_CONFIG"); fi
+        if [[ -n "$INPUT_BASE" ]]; then args+=(--base "$INPUT_BASE"); fi
+        if [[ -n "$INPUT_WORKING_TREE" ]]; then args+=(--working-tree "$INPUT_WORKING_TREE"); fi
+        if [[ "$INPUT_NO_CACHE" == "true" ]]; then args+=(--no-cache); fi
+
+        report="$RUNNER_TEMP/lintrules-report.json"
+        cd "$INPUT_WORKING_DIRECTORY"
+        lintrules "${args[@]}" > "$report"
+        status=$?
+
+        cat "$report"
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+        exit 0
+    - name: Annotate findings
+      shell: bash
+      env:
+        REPORT: ${{ steps.check.outputs.report }}
+        STATUS: ${{ steps.check.outputs.status }}
+      run: node "$GITHUB_ACTION_PATH/scripts/report-github-annotations.mjs" "$REPORT" "$STATUS"
+    - name: Fail on findings
+      if: inputs.fail-on-findings == 'true' && steps.check.outputs.status != '0'
+      shell: bash
+      run: exit 1
