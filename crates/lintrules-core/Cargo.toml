@@ -1,0 +1,25 @@
+[package]
+name = "lintrules-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Rule loading, Jev providers, and scanning for lintrules"
+
+[dependencies]
+anyhow.workspace = true
+git2.workspace = true
+globset.workspace = true
+gray_matter.workspace = true
+ignore.workspace = true
+lintrules-provider = { path = "../lintrules-provider" }
+lintrules-provider-cloudflare = { path = "../lintrules-provider-cloudflare" }
+lintrules-provider-typesafe = { path = "../lintrules-provider-typesafe" }
+lintrules-provider-vercel = { path = "../lintrules-provider-vercel" }
+rayon.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

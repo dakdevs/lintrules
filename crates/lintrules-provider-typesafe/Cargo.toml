@@ -1,0 +1,11 @@
+[package]
+name = "lintrules-provider-typesafe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TypeSafe Jev provider adapter"
+
+[dependencies]
+anyhow.workspace = true
+lintrules-provider = { path = "../lintrules-provider" }
+serde_json.workspace = true

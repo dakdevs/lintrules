@@ -1,0 +1,11 @@
+[package]
+name = "lintrules-provider-vercel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Vercel AI Gateway Jev provider adapter"
+
+[dependencies]
+anyhow.workspace = true
+lintrules-provider = { path = "../lintrules-provider" }
+serde_json.workspace = true

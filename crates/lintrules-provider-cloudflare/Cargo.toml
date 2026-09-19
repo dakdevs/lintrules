@@ -1,0 +1,11 @@
+[package]
+name = "lintrules-provider-cloudflare"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cloudflare Jev provider adapter"
+
+[dependencies]
+anyhow.workspace = true
+lintrules-provider = { path = "../lintrules-provider" }
+serde_json.workspace = true
