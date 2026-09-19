@@ -1,7 +1,0 @@
-{
-  "provider": "vercel",
-  "pr_report": "introduced",
-  "working_tree": "committed",
-  "max_concurrency": 4,
-  "cache": true
-}
