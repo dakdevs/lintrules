@@ -17,10 +17,10 @@ inputs:
     description: Git base revision used to report only introduced findings; defaults to the PR base.
     required: false
     default: ${{ github.event.pull_request.base.sha || '' }}
-  full-scan:
-    description: Set to true to scan and report on the entire repository, ignoring the PR base.
+  pr_report:
+    description: Report introduced findings (default) or all findings across the repository. Passed as --pr-report.
     required: false
-    default: "false"
+    default: introduced
   working-tree:
     description: Include or committed; overrides the matching config setting.
     required: false
@@ -41,7 +41,7 @@ runs:
         node-version: "24"
     - name: Install Lintrules
       shell: bash
-      run: bash "$GITHUB_ACTION_PATH/scripts/install-cli.sh" "@dakdevs/lintrules@1.0.1"
+      run: bash "$GITHUB_ACTION_PATH/scripts/install-cli.sh" "@dakdevs/lintrules@1.0.2"
     - name: Check rules
       id: check
       shell: bash
@@ -49,7 +49,7 @@ runs:
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INPUT_CONFIG: ${{ inputs.config }}
         INPUT_BASE: ${{ inputs.base }}
-        INPUT_FULL_SCAN: ${{ inputs.full-scan }}
+        INPUT_PR_REPORT: ${{ inputs.pr_report }}
         INPUT_WORKING_TREE: ${{ inputs.working-tree }}
         INPUT_NO_CACHE: ${{ inputs.no-cache }}
       run: bash "$GITHUB_ACTION_PATH/scripts/check-rules.sh"

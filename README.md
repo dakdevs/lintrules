@@ -72,14 +72,15 @@ To report existing violations across the whole repository on every PR, configure
 ```yaml
 - uses: dakdevs/lintrules@v1
   with:
-    full-scan: "true"
+    pr_report: all
   env:
     AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
 ```
 
-`full-scan` defaults to `false`. When enabled, it ignores both the automatic PR
-base and an explicitly supplied `base`, including when config uses
-`pr_report: "introduced"`.
+`pr_report` accepts `introduced` (the default) or `all`. The action passes it
+directly as `--pr-report introduced` or `--pr-report all`, overriding the project
+config. With `all`, the CLI reports across the repository without a Git base
+comparison. The same flag is available when running the CLI locally.
 
 The workflow needs a repository secret named `AI_GATEWAY_API_KEY` for Vercel.
 Fork and Dependabot PRs cannot access this secret; our own workflow skips them.

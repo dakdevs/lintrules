@@ -54,3 +54,54 @@ fn check_requires_the_selected_provider_credential() {
         .failure()
         .stderr(predicate::str::contains("TYPESAFE_API_KEY must be set"));
 }
+
+#[test]
+fn pr_report_flag_overrides_config_in_both_directions() {
+    let directory = tempdir().unwrap();
+    std::fs::create_dir(directory.path().join(".lintrules")).unwrap();
+    std::fs::write(
+        directory.path().join(".lintrules/rule.md"),
+        "---\ntitle: Rule\nglobs: [\"no-matching-files.rs\"]\n---\nCode must be valid.\n",
+    )
+    .unwrap();
+    for (configured, flag, succeeds) in [("introduced", "all", true), ("all", "introduced", false)]
+    {
+        std::fs::write(
+            directory.path().join("lintrules.config.json"),
+            format!(r#"{{"provider":"typesafe","cache":false,"pr_report":"{configured}"}}"#),
+        )
+        .unwrap();
+        let assertion = Command::cargo_bin("lintrules")
+            .unwrap()
+            .current_dir(directory.path())
+            .env("TYPESAFE_API_KEY", "unused-no-matching-files")
+            .args([
+                "--pr-report",
+                flag,
+                "--base",
+                "nonexistent-base",
+                "--format",
+                "json",
+            ])
+            .assert();
+        if succeeds {
+            assertion
+                .success()
+                .stdout(predicate::str::contains("\"findings\": []"));
+        } else {
+            assertion
+                .failure()
+                .stderr(predicate::str::contains("Git repository"));
+        }
+    }
+}
+
+#[test]
+fn pr_report_rejects_unknown_mode() {
+    Command::cargo_bin("lintrules")
+        .unwrap()
+        .args(["--pr-report", "everything"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid value"));
+}

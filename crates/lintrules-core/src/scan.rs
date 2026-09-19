@@ -79,6 +79,7 @@ pub fn check(
         .build()
         .context("could not create evaluation worker pool")?;
     let changed = base
+        .filter(|_| matches!(project.config.pr_report, PrReport::Introduced))
         .map(|base| {
             changed_lines(
                 &project.root,
