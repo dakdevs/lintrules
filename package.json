@@ -1,6 +1,6 @@
 {
   "name": "@dakdevs/lintrules",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Semantic code rules evaluated with Jev",
   "license": "MIT",
   "type": "module",
@@ -9,11 +9,8 @@
   },
   "files": [
     "bin",
-    "Cargo.toml",
-    "Cargo.lock",
-    "crates",
+    "native",
     "README.md",
-    "design.md",
     "LICENSE"
   ],
   "repository": {
@@ -31,6 +28,6 @@
     "lint": "cargo clippy --all-targets -- -D warnings",
     "test": "cargo test",
     "test:e2e": "cargo test --test cli",
-    "prepublishOnly": "cargo test"
+    "prepublishOnly": "node scripts/verify-native.mjs"
   }
 }

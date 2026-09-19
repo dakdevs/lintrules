@@ -4,28 +4,28 @@ import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const cargo = process.env.CARGO ?? "cargo";
-const result = spawnSync(
-  cargo,
-  [
-    "run",
-    "--quiet",
-    "--release",
-    "--manifest-path",
-    resolve(packageRoot, "Cargo.toml"),
-    "-p",
-    "lintrules",
-    "--",
-    ...process.argv.slice(2),
-  ],
-  { cwd: process.cwd(), stdio: "inherit" },
+const platform = `${process.platform}-${process.arch}`;
+const executable = process.platform === "win32" ? "lintrules.exe" : "lintrules";
+const binary = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "native",
+  platform,
+  executable,
 );
+const result = spawnSync(binary, process.argv.slice(2), {
+  cwd: process.cwd(),
+  env: process.env,
+  stdio: "inherit",
+});
 
-if (result.error?.code === "ENOENT") {
+if (result.error) {
   console.error(
-    "lintrules requires Cargo. Install Rust from https://rustup.rs/.",
+    `lintrules: could not run the bundled binary for ${platform}: ${result.error.message}`,
+  );
+  console.error(
+    "Supported platforms: macOS and Linux (x64/arm64), Windows (x64).",
   );
 }
-
+if (result.signal) process.kill(process.pid, result.signal);
 process.exit(result.status ?? 1);

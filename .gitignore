@@ -1,2 +1,3 @@
 /target/
 /.lintrules/.cache.json
+/native/

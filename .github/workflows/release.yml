@@ -6,7 +6,7 @@ on:
       version:
         description: npm semantic version to publish.
         required: true
-        default: 1.0.0
+        default: 1.0.1
         type: string
       npm_tag:
         description: npm distribution tag.
@@ -22,46 +22,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  binaries:
+    uses: ./.github/workflows/build-native.yml
+    with:
+      version: ${{ inputs.version }}
   publish:
+    needs: binaries
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
+      - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
       - name: Set release version
-        id: version
         env:
           VERSION: ${{ inputs.version }}
+        run: node scripts/set-version.mjs "$VERSION"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: native
+          merge-multiple: true
+      - name: Restore executable permissions
+        run: find native -type f -exec chmod 755 {} +
+      - name: Check release
         run: |
-          set -euo pipefail
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
-          python3 - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          manifest = Path("Cargo.toml")
-          contents = manifest.read_text()
-          updated, replacements = re.subn(
-              r'^version = "[^"]+"$',
-              f'version = "{os.environ["VERSION"]}"',
-              contents,
-              count=1,
-              flags=re.MULTILINE,
-          )
-          if replacements != 1:
-              raise SystemExit("could not update workspace package version")
-          manifest.write_text(updated)
-          PY
-          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Test release package
-        run: cargo test
+          cargo fmt --check
+          bun run lint
+          cargo test --locked
+          bun test
+          bun run test:e2e
+          node scripts/verify-native.mjs
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -69,7 +63,7 @@ jobs:
         run: npm publish --access public --tag "$NPM_TAG"
       - name: Tag and push release
         env:
-          VERSION: ${{ steps.version.outputs.value }}
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -83,5 +77,5 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.value }}
+          VERSION: ${{ inputs.version }}
         run: gh release create "v$VERSION" --title "v$VERSION" --generate-notes

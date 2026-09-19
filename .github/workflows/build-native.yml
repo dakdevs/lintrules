@@ -1,0 +1,72 @@
+name: Build native binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version override (empty uses package.json).
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            platform: darwin-arm64
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            platform: darwin-x64
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            platform: linux-x64
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            platform: linux-arm64
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: win32-x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: oven-sh/setup-bun@v2
+      - name: Set version
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: node scripts/set-version.mjs "$VERSION"
+      - name: Install musl toolchain
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Build
+        shell: bash
+        run: cargo build --release --locked -p lintrules --target ${{ matrix.target }}
+      - name: Stage binary
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          extension=""
+          if [[ "$RUNNER_OS" == "Windows" ]]; then extension=".exe"; fi
+          node scripts/stage-native.mjs "target/$TARGET/release/lintrules$extension"
+      - name: Test npm package without install scripts
+        shell: bash
+        run: bun test tests/native-package.test.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: native/
+          if-no-files-found: error

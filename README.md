@@ -16,8 +16,20 @@ Install directly from this repository with Cargo:
 cargo install --git https://github.com/dakdevs/lintrules.git --locked --package lintrules
 ```
 
-Or install the npm package, which bundles the Cargo workspace and requires
-[Cargo](https://rustup.rs/) when the command runs:
+Run directly with Bun (no Rust or Cargo installation required):
+
+```sh
+bunx @dakdevs/lintrules
+```
+
+Run it from a project containing `lintrules.config.json` and `.lintrules/`, with
+the provider credentials exported in your environment. The command also finds
+the configuration from subdirectories. To create starter files, run
+`bunx @dakdevs/lintrules init --provider vercel`.
+
+The npm package includes prebuilt binaries for macOS and Linux (x64 and arm64)
+and Windows (x64). Linux binaries use musl and also work on Alpine. No install
+scripts or compiler are needed. You can also install it globally:
 
 ```sh
 npm install --global @dakdevs/lintrules
@@ -60,8 +72,8 @@ exists instead of tracking `main`.
 ## Releases
 
 Run **Publish npm release** from the Actions tab with the semantic version to
-publish; it defaults to `1.0.0`. Add an `NPM_TOKEN` repository secret from the
-npm account that owns `@dakdevs/lintrules`. The workflow tests, publishes, commits the
+publish; it defaults to `1.0.1`. Add an `NPM_TOKEN` repository secret from the
+npm account that owns `@dakdevs/lintrules`. The workflow builds and tests every supported binary, publishes, commits the
 version, tags it, and creates the matching GitHub release.
 
 The repository is a Cargo workspace: `crates/lintrules` contains the CLI and

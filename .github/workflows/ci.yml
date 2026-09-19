@@ -20,6 +20,8 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test
+      - run: cargo build --release --locked -p lintrules
+      - run: node scripts/stage-native.mjs target/release/lintrules
       - run: bun test
       - run: bun run test:e2e
       - run: npm pack --dry-run
