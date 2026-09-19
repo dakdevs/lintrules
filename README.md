@@ -54,8 +54,8 @@ jobs:
 ```
 
 Set `fail-on-findings: "false"` to keep annotations while allowing the job to
-succeed. Use a release tag such as `dakdevs/lintrules@v20260918.1.0` once a
-release exists instead of tracking `main`.
+succeed. Use a release tag such as `dakdevs/lintrules@v1.0.0` once a release
+exists instead of tracking `main`.
 
 ## Releases
 
