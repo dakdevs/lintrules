@@ -3,7 +3,7 @@ use std::{path::PathBuf, process::ExitCode};
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use lintrules_core::{
-    config::{ProviderName, WorkingTree, discover_project, load_rules, write_init},
+    config::{PrReport, ProviderName, WorkingTree, discover_project, load_rules, write_init},
     scan::{Report, check},
 };
 
@@ -20,6 +20,9 @@ struct Cli {
     base: Option<String>,
     #[arg(long, global = true, value_enum)]
     working_tree: Option<WorkingTreeArg>,
+    /// Report all findings or only findings introduced relative to --base.
+    #[arg(long, global = true, value_enum)]
+    pr_report: Option<PrReportArg>,
     #[arg(long, global = true)]
     no_cache: bool,
     #[arg(long, global = true, value_enum, default_value_t = Format::Terminal)]
@@ -47,6 +50,12 @@ enum ProviderArg {
 enum WorkingTreeArg {
     Include,
     Committed,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum PrReportArg {
+    Introduced,
+    All,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -87,7 +96,13 @@ fn run() -> Result<bool> {
             Ok(true)
         }
         None => {
-            let project = discover_project(cli.config.as_deref())?;
+            let mut project = discover_project(cli.config.as_deref())?;
+            if let Some(report) = cli.pr_report {
+                project.config.pr_report = match report {
+                    PrReportArg::Introduced => PrReport::Introduced,
+                    PrReportArg::All => PrReport::All,
+                };
+            }
             let rules = match load_rules(&project.root) {
                 Ok(rules) => rules,
                 Err(errors) => {

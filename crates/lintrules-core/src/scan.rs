@@ -49,6 +49,7 @@ pub struct Report {
 }
 
 impl Report {
+    #[must_use]
     pub fn failed(&self) -> bool {
         !self.findings.is_empty()
     }
@@ -60,6 +61,11 @@ struct SourceFile {
     source: String,
 }
 
+/// Checks matching files against the rules and collects findings.
+///
+/// # Errors
+/// Returns an error if provider setup, worker creation, Git comparison, source
+/// discovery, or glob compilation fails. Evaluation failures become findings.
 pub fn check(
     project: &Project,
     rules: &[Rule],
@@ -73,11 +79,12 @@ pub fn check(
         .build()
         .context("could not create evaluation worker pool")?;
     let changed = base
+        .filter(|_| matches!(project.config.pr_report, PrReport::Introduced))
         .map(|base| {
             changed_lines(
                 &project.root,
                 base,
-                working_tree.unwrap_or_else(|| project.config.working_tree.clone()),
+                working_tree.unwrap_or(project.config.working_tree),
             )
         })
         .transpose()?;
@@ -103,12 +110,12 @@ pub fn check(
         let cross_file = infer_cross_file(rule, &jev, &mut report);
         evaluate_rule(
             rule,
-            applicable,
+            &applicable,
             cross_file,
             &jev,
             &pool,
             &mut report,
-            EvaluateOptions {
+            &EvaluateOptions {
                 max_context_chars: project.config.max_context_chars,
                 changed: changed.as_ref(),
                 pr_report: &project.config.pr_report,
@@ -183,11 +190,11 @@ fn qualify(
             )),
         );
         match jev.ask(
-            json!({"file": {"path": file.path, "source": numbered(&file.source, 1)}}),
+            &json!({"file": {"path": file.path, "source": numbered(&file.source, 1)}}),
             questions,
         ) {
             Ok(answers) if answers["qualifies"] > config.thresholds.inapplicable => {
-                qualified.push(file)
+                qualified.push(file);
             }
             Ok(_) => {}
             Err(error) => {
@@ -205,7 +212,7 @@ fn qualify(
 fn infer_cross_file(rule: &Rule, jev: &Jev, report: &mut Report) -> bool {
     let mut questions = BTreeMap::new();
     questions.insert("cross_file".to_owned(), noul("Does this rule require comparing or relating more than one file to determine compliance? Answer yes when uncertain."));
-    match jev.ask(json!({"rule": rule.body}), questions) {
+    match jev.ask(&json!({"rule": rule.body}), questions) {
         Ok(answers) => answers["cross_file"] >= 0.5,
         Err(error) => {
             report.findings.push(incomplete(
@@ -227,12 +234,12 @@ struct EvaluateOptions<'a> {
 
 fn evaluate_rule(
     rule: &Rule,
-    files: Vec<SourceFile>,
+    files: &[SourceFile],
     cross_file: bool,
     jev: &Jev,
     pool: &ThreadPool,
     report: &mut Report,
-    options: EvaluateOptions<'_>,
+    options: &EvaluateOptions<'_>,
 ) {
     let full_context = if cross_file {
         let context = files
@@ -277,7 +284,7 @@ fn evaluate_rule(
                 } else {
                     json!({"rule": rule.body, "files": [{"path": file.path, "source": numbered(&file.source, 1)}]})
                 };
-                evaluate_file(rule, file, state, jev, &options)
+                evaluate_file(rule, file, &state, jev, options)
             })
             .collect::<Vec<_>>()
     });
@@ -289,7 +296,7 @@ fn evaluate_rule(
 fn evaluate_file(
     rule: &Rule,
     file: &SourceFile,
-    state: Value,
+    state: &Value,
     jev: &Jev,
     options: &EvaluateOptions<'_>,
 ) -> Vec<Finding> {
@@ -315,7 +322,7 @@ fn evaluate_file(
                 noul(format!("Does source line {line} in `files` entry with path `{}` violate the rule in `rule`? Answer yes only when that exact existing line is a violating location. Do not use yes for missing code.", file.path)),
             );
         }
-        let answers = match jev.ask(state.clone(), questions) {
+        let answers = match jev.ask(state, questions) {
             Ok(answers) => answers,
             Err(error) => {
                 findings.push(incomplete(
@@ -502,14 +509,14 @@ fn changed_lines(root: &Path, base: &str, working_tree: WorkingTree) -> Result<C
     };
     let mut changed = ChangedLines::default();
     for delta in diff.deltas() {
-        if let Some(path) = project_relative_path(&root, &workdir, delta) {
+        if let Some(path) = project_relative_path(&root, &workdir, &delta) {
             changed.lines.entry(path).or_default();
         }
     }
     diff.print(DiffFormat::Patch, |delta, _, line| {
         if line.origin() == '+'
             && let (Some(path), Some(line_number)) = (
-                project_relative_path(&root, &workdir, delta),
+                project_relative_path(&root, &workdir, &delta),
                 line.new_lineno(),
             )
         {
@@ -524,7 +531,7 @@ fn changed_lines(root: &Path, base: &str, working_tree: WorkingTree) -> Result<C
     Ok(changed)
 }
 
-fn project_relative_path(root: &Path, workdir: &Path, delta: DiffDelta<'_>) -> Option<String> {
+fn project_relative_path(root: &Path, workdir: &Path, delta: &DiffDelta<'_>) -> Option<String> {
     let path = delta
         .new_file()
         .path()

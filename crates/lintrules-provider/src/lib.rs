@@ -26,8 +26,16 @@ pub trait JevProvider: Send + Sync {
     fn id(&self) -> &'static str;
     fn default_model(&self) -> &'static str;
     fn required_env(&self) -> &'static [&'static str];
+    /// Builds the provider request.
+    ///
+    /// # Errors
+    /// Returns an error if credentials or provider configuration are invalid.
     fn request(&self, evaluation: Evaluation<'_>) -> Result<ProviderRequest>;
 
+    /// Checks that required provider credentials are present.
+    ///
+    /// # Errors
+    /// Returns an error if a required environment variable is missing or invalid.
     fn validate(&self) -> Result<()> {
         for name in self.required_env() {
             required_env(name)?;
@@ -35,15 +43,28 @@ pub trait JevProvider: Send + Sync {
         Ok(())
     }
 
+    /// Converts a provider response into the shared Jev response format.
+    ///
+    /// # Errors
+    /// Implementations may reject malformed provider responses.
     fn normalize_response(&self, response: Value) -> Result<Value> {
         Ok(response)
     }
 
+    /// Sends an evaluation request and normalizes its response.
+    ///
+    /// # Errors
+    /// Returns an error for invalid credentials, transport failures, unsuccessful
+    /// HTTP responses, or malformed response bodies.
     fn evaluate(&self, client: &Client, evaluation: Evaluation<'_>) -> Result<Value> {
         self.normalize_response(post(client, self.request(evaluation)?)?)
     }
 }
 
+/// Reads a required provider environment variable.
+///
+/// # Errors
+/// Returns an error when the variable is absent or not valid Unicode.
 pub fn required_env(name: &str) -> Result<String> {
     env::var(name).with_context(|| format!("{name} must be set for the selected provider"))
 }

@@ -57,8 +57,8 @@ test("a failing scan completes the action step and preserves every annotation", 
   expect(text).toContain("file=src/forms.tsx");
 });
 
-for (const fullScan of [undefined, "false", "true"]) {
-  test(`full-scan=${fullScan ?? "default"} controls PR base filtering`, async () => {
+for (const prReport of [undefined, "introduced", "all"]) {
+  test(`pr_report=${prReport ?? "default"} is passed literally to the CLI`, async () => {
     const directory = mkdtempSync(join(tmpdir(), "lintrules-scope-"));
     const bin = join(directory, "bin");
     mkdirSync(bin);
@@ -78,7 +78,7 @@ for (const fullScan of [undefined, "false", "true"]) {
         GITHUB_OUTPUT: join(directory, "output"),
         INPUT_WORKING_DIRECTORY: directory,
         INPUT_BASE: "test-pr-base",
-        INPUT_FULL_SCAN: fullScan,
+        INPUT_PR_REPORT: prReport,
         CAPTURE_ARGS: capture,
       },
       stdout: "pipe",
@@ -86,10 +86,13 @@ for (const fullScan of [undefined, "false", "true"]) {
     });
     expect(await child.exited).toBe(0);
     const args = readFileSync(capture, "utf8").trim().split("\n");
-    expect(args).toEqual(
-      fullScan === "true"
-        ? ["--format", "json"]
-        : ["--format", "json", "--base", "test-pr-base"],
-    );
+    expect(args).toEqual([
+      "--format",
+      "json",
+      "--pr-report",
+      prReport ?? "introduced",
+      "--base",
+      "test-pr-base",
+    ]);
   });
 }

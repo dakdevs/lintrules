@@ -1,0 +1,6 @@
+{
+  "provider": "vercel",
+  "working_tree": "committed",
+  "max_concurrency": 4,
+  "cache": true
+}

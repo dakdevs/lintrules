@@ -22,7 +22,7 @@ pub enum PrReport {
     All,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum WorkingTree {
     Include,
@@ -95,6 +95,10 @@ fn default_max_concurrency() -> usize {
 }
 
 impl Config {
+    /// Checks configuration limits and probability thresholds.
+    ///
+    /// # Errors
+    /// Returns an error for invalid thresholds or zero context/concurrency limits.
     pub fn validate(&self) -> Result<()> {
         if !(0.0..=1.0).contains(&self.thresholds.pass)
             || !(0.0..=1.0).contains(&self.thresholds.violation)
@@ -122,6 +126,10 @@ pub struct Project {
     pub config: Config,
 }
 
+/// Loads an explicit configuration or finds one in the current directory ancestry.
+///
+/// # Errors
+/// Returns an error if configuration cannot be found, read, parsed, or validated.
 pub fn discover_project(config_path: Option<&Path>) -> Result<Project> {
     let config_path = match config_path {
         Some(path) => fs::canonicalize(path)
@@ -172,6 +180,10 @@ pub struct Rule {
     pub body: String,
 }
 
+/// Loads every Markdown rule and collects configuration errors.
+///
+/// # Errors
+/// Returns all discovered rule errors, including missing or unreadable rules.
 pub fn load_rules(root: &Path) -> Result<Vec<Rule>, Vec<String>> {
     let directory = root.join(".lintrules");
     if !directory.is_dir() {
@@ -254,6 +266,10 @@ fn parse_rule(path: &Path) -> Result<Rule> {
     })
 }
 
+/// Creates a starter configuration and example rule.
+///
+/// # Errors
+/// Returns an error if configuration already exists or files cannot be written.
 pub fn write_init(root: &Path, provider: ProviderName) -> Result<()> {
     let config = root.join("lintrules.config.json");
     let rules = root.join(".lintrules");
