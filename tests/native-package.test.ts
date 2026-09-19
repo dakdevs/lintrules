@@ -36,20 +36,21 @@ test("npm package runs in the consumer project without Cargo or install scripts"
   );
   expect(packed.status).toBe(0);
   const [archive] = JSON.parse(packed.stdout);
+  const githubPath = join(directory, "github-path");
   const installed = await run(
-    [
-      "npm",
-      "install",
-      "--ignore-scripts",
-      "--no-audit",
-      "--no-fund",
-      join(directory, archive.filename),
-    ],
-    { cwd: directory },
+    ["bash", "scripts/install-cli.sh", join(directory, archive.filename)],
+    {
+      cwd: root,
+      env: { ...process.env, RUNNER_TEMP: directory, GITHUB_PATH: githubPath },
+    },
   );
   expect(installed.status).toBe(0);
+  const installRoot = join(directory, "lintrules");
+  expect(readFileSync(githubPath, "utf8").trim()).toBe(
+    join(installRoot, "node_modules", ".bin"),
+  );
   const cli = join(
-    directory,
+    installRoot,
     "node_modules",
     "@dakdevs",
     "lintrules",
@@ -81,7 +82,7 @@ test("npm package runs in the consumer project without Cargo or install scripts"
     join(directory, ".lintrules", "example.md"),
     '---\ntitle: Test rule\nglobs: ["nothing-matches-*.rs"]\n---\nUse functional code.\n',
   );
-  const nested = join(directory, "nested");
+  const nested = join(installRoot, "nested");
   mkdirSync(nested);
   const check = await run([process.execPath, cli, "--format", "json"], {
     cwd: nested,
