@@ -42,7 +42,7 @@ jobs:
         uses: dakdevs/lintrules@v1
         with:
           base: ${{ github.event.pull_request.base.sha || inputs.base }}
-          pr_report: all
+          report-scope: all
           working-tree: committed
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}

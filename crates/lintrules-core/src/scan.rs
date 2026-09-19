@@ -13,9 +13,15 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::{
-    config::{PrReport, Project, Rule, Thresholds, WorkingTree},
+    config::{Project, Rule, Thresholds, WorkingTree},
     provider::{Jev, Question},
 };
+
+#[derive(Debug, Clone, Copy)]
+pub enum ReportScope {
+    Introduced,
+    All,
+}
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -72,6 +78,7 @@ pub fn check(
     base: Option<&str>,
     working_tree: Option<WorkingTree>,
     no_cache: bool,
+    report_scope: ReportScope,
 ) -> Result<Report> {
     let jev = Jev::new(&project.config, &project.root, no_cache)?;
     let pool = ThreadPoolBuilder::new()
@@ -79,7 +86,7 @@ pub fn check(
         .build()
         .context("could not create evaluation worker pool")?;
     let changed = base
-        .filter(|_| matches!(project.config.pr_report, PrReport::Introduced))
+        .filter(|_| matches!(report_scope, ReportScope::Introduced))
         .map(|base| {
             changed_lines(
                 &project.root,
@@ -118,7 +125,7 @@ pub fn check(
             &EvaluateOptions {
                 max_context_chars: project.config.max_context_chars,
                 changed: changed.as_ref(),
-                pr_report: &project.config.pr_report,
+                report_scope,
                 thresholds: &project.config.thresholds,
             },
         );
@@ -228,7 +235,7 @@ fn infer_cross_file(rule: &Rule, jev: &Jev, report: &mut Report) -> bool {
 struct EvaluateOptions<'a> {
     max_context_chars: usize,
     changed: Option<&'a ChangedLines>,
-    pr_report: &'a PrReport,
+    report_scope: ReportScope,
     thresholds: &'a Thresholds,
 }
 
@@ -266,7 +273,7 @@ fn evaluate_rule(
             .par_iter()
             .map(|file| {
                 let targets = options.changed.map(|changed| changed.includes(&file.path));
-                if matches!(options.pr_report, PrReport::Introduced)
+                if matches!(options.report_scope, ReportScope::Introduced)
                     && options.changed.is_some()
                     && !targets.unwrap_or(false)
                 {
@@ -338,7 +345,7 @@ fn evaluate_file(
         }
         for line in line_chunk {
             let probability = answers[&format!("line_{line}")];
-            if !should_report(*line, &file.path, options.changed, options.pr_report) {
+            if !should_report(*line, &file.path, options.changed, options.report_scope) {
                 continue;
             }
             if probability >= options.thresholds.violation {
@@ -366,7 +373,7 @@ fn evaluate_file(
     if let Some(probability) = overall {
         if probability >= options.thresholds.violation
             && !had_line_violation
-            && should_report_file(&file.path, options.changed, options.pr_report)
+            && should_report_file(&file.path, options.changed, options.report_scope)
         {
             findings.push(finding(
                 FindingKind::Violation,
@@ -378,7 +385,7 @@ fn evaluate_file(
             ));
         } else if probability > options.thresholds.pass
             && probability < options.thresholds.violation
-            && should_report_file(&file.path, options.changed, options.pr_report)
+            && should_report_file(&file.path, options.changed, options.report_scope)
         {
             findings.push(finding(
                 FindingKind::Inconclusive,
@@ -438,14 +445,18 @@ fn should_report(
     line: usize,
     path: &str,
     changed: Option<&ChangedLines>,
-    pr_report: &PrReport,
+    report_scope: ReportScope,
 ) -> bool {
-    !matches!(pr_report, PrReport::Introduced)
+    !matches!(report_scope, ReportScope::Introduced)
         || changed.is_none_or(|changed| changed.includes_line(path, line))
 }
 
-fn should_report_file(path: &str, changed: Option<&ChangedLines>, pr_report: &PrReport) -> bool {
-    !matches!(pr_report, PrReport::Introduced)
+fn should_report_file(
+    path: &str,
+    changed: Option<&ChangedLines>,
+    report_scope: ReportScope,
+) -> bool {
+    !matches!(report_scope, ReportScope::Introduced)
         || changed.is_none_or(|changed| changed.includes(path))
 }
 

@@ -74,8 +74,4 @@ fn repository_dogfood_rules_and_config_are_valid() {
         project.config.provider,
         lintrules_core::config::ProviderName::Vercel
     ));
-    assert!(matches!(
-        project.config.pr_report,
-        lintrules_core::config::PrReport::Introduced
-    ));
 }

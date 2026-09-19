@@ -3,8 +3,8 @@ use std::{path::PathBuf, process::ExitCode};
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use lintrules_core::{
-    config::{PrReport, ProviderName, WorkingTree, discover_project, load_rules, write_init},
-    scan::{Report, check},
+    config::{ProviderName, WorkingTree, discover_project, load_rules, write_init},
+    scan::{Report, ReportScope, check},
 };
 
 #[derive(Parser)]
@@ -21,8 +21,8 @@ struct Cli {
     #[arg(long, global = true, value_enum)]
     working_tree: Option<WorkingTreeArg>,
     /// Report all findings or only findings introduced relative to --base.
-    #[arg(long, global = true, value_enum)]
-    pr_report: Option<PrReportArg>,
+    #[arg(long, global = true, value_enum, default_value_t = ReportScopeArg::Introduced)]
+    report_scope: ReportScopeArg,
     #[arg(long, global = true)]
     no_cache: bool,
     #[arg(long, global = true, value_enum, default_value_t = Format::Terminal)]
@@ -53,7 +53,7 @@ enum WorkingTreeArg {
 }
 
 #[derive(Clone, Copy, ValueEnum)]
-enum PrReportArg {
+enum ReportScopeArg {
     Introduced,
     All,
 }
@@ -96,13 +96,7 @@ fn run() -> Result<bool> {
             Ok(true)
         }
         None => {
-            let mut project = discover_project(cli.config.as_deref())?;
-            if let Some(report) = cli.pr_report {
-                project.config.pr_report = match report {
-                    PrReportArg::Introduced => PrReport::Introduced,
-                    PrReportArg::All => PrReport::All,
-                };
-            }
+            let project = discover_project(cli.config.as_deref())?;
             let rules = match load_rules(&project.root) {
                 Ok(rules) => rules,
                 Err(errors) => {
@@ -126,6 +120,10 @@ fn run() -> Result<bool> {
                 cli.base.as_deref(),
                 working_tree,
                 cli.no_cache,
+                match cli.report_scope {
+                    ReportScopeArg::Introduced => ReportScope::Introduced,
+                    ReportScopeArg::All => ReportScope::All,
+                },
             )?;
             print_report(&report, cli.format);
             Ok(!report.failed())

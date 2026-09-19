@@ -57,8 +57,8 @@ test("a failing scan completes the action step and preserves every annotation", 
   expect(text).toContain("file=src/forms.tsx");
 });
 
-for (const prReport of [undefined, "introduced", "all"]) {
-  test(`pr_report=${prReport ?? "default"} is passed literally to the CLI`, async () => {
+for (const reportScope of [undefined, "introduced", "all"]) {
+  test(`report-scope=${reportScope ?? "default"} is passed literally to the CLI`, async () => {
     const directory = mkdtempSync(join(tmpdir(), "lintrules-scope-"));
     const bin = join(directory, "bin");
     mkdirSync(bin);
@@ -78,7 +78,7 @@ for (const prReport of [undefined, "introduced", "all"]) {
         GITHUB_OUTPUT: join(directory, "output"),
         INPUT_WORKING_DIRECTORY: directory,
         INPUT_BASE: "test-pr-base",
-        INPUT_PR_REPORT: prReport,
+        INPUT_REPORT_SCOPE: reportScope,
         CAPTURE_ARGS: capture,
       },
       stdout: "pipe",
@@ -89,8 +89,8 @@ for (const prReport of [undefined, "introduced", "all"]) {
     expect(args).toEqual([
       "--format",
       "json",
-      "--pr-report",
-      prReport ?? "introduced",
+      "--report-scope",
+      reportScope ?? "introduced",
       "--base",
       "test-pr-base",
     ]);

@@ -15,13 +15,6 @@ pub enum ProviderName {
     Vercel,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum PrReport {
-    Introduced,
-    All,
-}
-
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum WorkingTree {
@@ -66,8 +59,6 @@ pub struct Config {
     pub model: Option<String>,
     #[serde(default)]
     pub thresholds: Thresholds,
-    #[serde(default = "default_pr_report")]
-    pub pr_report: PrReport,
     #[serde(default = "default_working_tree")]
     pub working_tree: WorkingTree,
     #[serde(default = "default_cache")]
@@ -78,9 +69,6 @@ pub struct Config {
     pub max_concurrency: usize,
 }
 
-fn default_pr_report() -> PrReport {
-    PrReport::Introduced
-}
 fn default_working_tree() -> WorkingTree {
     WorkingTree::Include
 }
@@ -281,7 +269,6 @@ pub fn write_init(root: &Path, provider: ProviderName) -> Result<()> {
         provider,
         model: None,
         thresholds: Thresholds::default(),
-        pr_report: PrReport::Introduced,
         working_tree: WorkingTree::Include,
         cache: true,
         max_context_chars: default_context_chars(),

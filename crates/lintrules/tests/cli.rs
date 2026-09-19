@@ -56,7 +56,7 @@ fn check_requires_the_selected_provider_credential() {
 }
 
 #[test]
-fn pr_report_flag_overrides_config_in_both_directions() {
+fn report_scope_controls_base_filtering() {
     let directory = tempdir().unwrap();
     std::fs::create_dir(directory.path().join(".lintrules")).unwrap();
     std::fs::write(
@@ -64,19 +64,18 @@ fn pr_report_flag_overrides_config_in_both_directions() {
         "---\ntitle: Rule\nglobs: [\"no-matching-files.rs\"]\n---\nCode must be valid.\n",
     )
     .unwrap();
-    for (configured, flag, succeeds) in [("introduced", "all", true), ("all", "introduced", false)]
-    {
-        std::fs::write(
-            directory.path().join("lintrules.config.json"),
-            format!(r#"{{"provider":"typesafe","cache":false,"pr_report":"{configured}"}}"#),
-        )
-        .unwrap();
+    std::fs::write(
+        directory.path().join("lintrules.config.json"),
+        r#"{"provider":"typesafe","cache":false}"#,
+    )
+    .unwrap();
+    for (flag, succeeds) in [("all", true), ("introduced", false)] {
         let assertion = Command::cargo_bin("lintrules")
             .unwrap()
             .current_dir(directory.path())
             .env("TYPESAFE_API_KEY", "unused-no-matching-files")
             .args([
-                "--pr-report",
+                "--report-scope",
                 flag,
                 "--base",
                 "nonexistent-base",
@@ -97,10 +96,10 @@ fn pr_report_flag_overrides_config_in_both_directions() {
 }
 
 #[test]
-fn pr_report_rejects_unknown_mode() {
+fn report_scope_rejects_unknown_mode() {
     Command::cargo_bin("lintrules")
         .unwrap()
-        .args(["--pr-report", "everything"])
+        .args(["--report-scope", "everything"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("invalid value"));

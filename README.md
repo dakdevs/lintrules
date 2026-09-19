@@ -77,7 +77,6 @@ Optional settings and their defaults:
 ```json
 {
   "provider": "vercel",
-  "pr_report": "introduced",
   "working_tree": "include",
   "max_concurrency": 4,
   "max_context_chars": 100000,
@@ -92,13 +91,13 @@ Optional settings and their defaults:
 
 Set `model` to override the provider's default model.
 
-Without `--base`, Lintrules checks the whole repository. With `--base`,
-`pr_report: "introduced"` limits findings to changed files and lines.
-Set `pr_report` to `"all"` to include existing findings.
+Without `--base`, Lintrules checks the whole repository. With `--base`, the
+default report scope limits findings to changed files and lines. Use
+`--report-scope all` to include existing findings.
 
 | CLI option                               | Purpose                                            |
 | ---------------------------------------- | -------------------------------------------------- |
-| `--pr-report all`                        | Report existing findings and override the config.  |
+| `--report-scope all`                     | Report existing findings across the repository.    |
 | `--base origin/main`                     | Compare against the merge base with `origin/main`. |
 | `--working-tree committed`               | Compare committed changes when using `--base`.     |
 | `--config path/to/lintrules.config.json` | Use a specific config.                             |
@@ -143,13 +142,13 @@ To include existing violations across the repository:
 ```yaml
 - uses: dakdevs/lintrules@v1
   with:
-    pr_report: all
+    report-scope: all
   env:
     AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
 ```
 
-`pr_report` accepts `introduced` or `all` and passes the value as `--pr-report`.
-It defaults to `introduced` and overrides the project config. With `all`, the
+`report-scope` accepts `introduced` or `all` and passes the value as `--report-scope`.
+It defaults to `introduced`. With `all`, the
 CLI reports existing findings without a Git base comparison. Set
 `fail-on-findings: "false"` to keep annotations without failing the job.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-args=(--format json --pr-report "${INPUT_PR_REPORT:-introduced}")
+args=(--format json --report-scope "${INPUT_REPORT_SCOPE:-introduced}")
 if [[ -n "${INPUT_CONFIG:-}" ]]; then args+=(--config "$INPUT_CONFIG"); fi
 if [[ -n "${INPUT_BASE:-}" ]]; then args+=(--base "$INPUT_BASE"); fi
 if [[ -n "${INPUT_WORKING_TREE:-}" ]]; then args+=(--working-tree "$INPUT_WORKING_TREE"); fi

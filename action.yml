@@ -17,8 +17,8 @@ inputs:
     description: Git base revision used to report only introduced findings; defaults to the PR base.
     required: false
     default: ${{ github.event.pull_request.base.sha || '' }}
-  pr_report:
-    description: Report introduced findings (default) or all findings across the repository. Passed as --pr-report.
+  report-scope:
+    description: Report introduced findings (default) or all findings across the repository. Passed as --report-scope.
     required: false
     default: introduced
   working-tree:
@@ -49,7 +49,7 @@ runs:
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         INPUT_CONFIG: ${{ inputs.config }}
         INPUT_BASE: ${{ inputs.base }}
-        INPUT_PR_REPORT: ${{ inputs.pr_report }}
+        INPUT_REPORT_SCOPE: ${{ inputs.report-scope }}
         INPUT_WORKING_TREE: ${{ inputs.working-tree }}
         INPUT_NO_CACHE: ${{ inputs.no-cache }}
       run: bash "$GITHUB_ACTION_PATH/scripts/check-rules.sh"
