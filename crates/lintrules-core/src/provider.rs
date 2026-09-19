@@ -48,6 +48,10 @@ struct Cache {
 }
 
 impl Jev {
+    /// Creates a provider client with optional persistent caching.
+    ///
+    /// # Errors
+    /// Returns an error for invalid credentials, unreadable cache, or client setup failure.
     pub fn new(config: &Config, root: &Path, no_cache: bool) -> Result<Self> {
         let provider = provider(&config.provider);
         provider.validate()?;
@@ -71,9 +75,13 @@ impl Jev {
         })
     }
 
+    /// Evaluates questions against the supplied state, using cached results when available.
+    ///
+    /// # Errors
+    /// Returns an error for serialization, provider, response parsing, or cache failures.
     pub fn ask(
         &self,
-        state: Value,
+        state: &Value,
         questions: BTreeMap<String, Question>,
     ) -> Result<BTreeMap<String, f64>> {
         let questions = serde_json::to_value(questions)?;
@@ -90,7 +98,7 @@ impl Jev {
                 .ok()
                 .and_then(|cache| cache.entries.get(&key).cloned())
         }) {
-            return probabilities(cached);
+            return probabilities(&cached);
         }
         let response = self.provider.evaluate(
             &self.client,
@@ -100,7 +108,7 @@ impl Jev {
                 questions: request["questions"].clone(),
             },
         )?;
-        let parsed = probabilities(response.clone())?;
+        let parsed = probabilities(&response)?;
         if !parsed.values().any(|probability| {
             *probability > self.thresholds.pass && *probability < self.thresholds.violation
         }) && let Some(cache) = &self.cache
@@ -115,7 +123,7 @@ impl Jev {
     }
 }
 
-fn probabilities(response: Value) -> Result<BTreeMap<String, f64>> {
+fn probabilities(response: &Value) -> Result<BTreeMap<String, f64>> {
     let answers = response
         .get("answers")
         .and_then(Value::as_object)
@@ -158,8 +166,40 @@ fn digest(value: &Value) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::provider;
+    use super::{probabilities, provider};
     use crate::config::ProviderName;
+    use serde_json::json;
+
+    #[test]
+    fn probabilities_accepts_provider_formats_without_consuming_response() {
+        let response = json!({"answers": {
+            "a": {"noul": 0.0},
+            "b": {"boolean": 0.5},
+            "c": {"probability": 1.0}
+        }});
+        let parsed = probabilities(&response).unwrap();
+        assert_eq!(
+            parsed,
+            [
+                ("a".to_owned(), 0.0),
+                ("b".to_owned(), 0.5),
+                ("c".to_owned(), 1.0)
+            ]
+            .into()
+        );
+        assert_eq!(probabilities(&response).unwrap(), parsed);
+    }
+
+    #[test]
+    fn probabilities_rejects_missing_or_invalid_answers() {
+        for response in [
+            json!({}),
+            json!({"answers": []}),
+            json!({"answers": {"a": {"noul": "yes"}}}),
+        ] {
+            assert!(probabilities(&response).is_err());
+        }
+    }
 
     #[test]
     fn provider_registry_defines_the_default_models() {
