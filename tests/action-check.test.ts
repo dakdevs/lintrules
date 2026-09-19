@@ -56,3 +56,40 @@ test("a failing scan completes the action step and preserves every annotation", 
   expect(text).toContain("file=src/effect.ts,line=42");
   expect(text).toContain("file=src/forms.tsx");
 });
+
+for (const fullScan of [undefined, "false", "true"]) {
+  test(`full-scan=${fullScan ?? "default"} controls PR base filtering`, async () => {
+    const directory = mkdtempSync(join(tmpdir(), "lintrules-scope-"));
+    const bin = join(directory, "bin");
+    mkdirSync(bin);
+    const executable = join(bin, "lintrules");
+    writeFileSync(
+      executable,
+      '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$CAPTURE_ARGS"\nprintf \'{"findings":[],"skipped":[]}\\n\'\n',
+    );
+    chmodSync(executable, 0o755);
+    const capture = join(directory, "args");
+    const child = Bun.spawn(["bash", "scripts/check-rules.sh"], {
+      cwd: root,
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        RUNNER_TEMP: directory,
+        GITHUB_OUTPUT: join(directory, "output"),
+        INPUT_WORKING_DIRECTORY: directory,
+        INPUT_BASE: "test-pr-base",
+        INPUT_FULL_SCAN: fullScan,
+        CAPTURE_ARGS: capture,
+      },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(await child.exited).toBe(0);
+    const args = readFileSync(capture, "utf8").trim().split("\n");
+    expect(args).toEqual(
+      fullScan === "true"
+        ? ["--format", "json"]
+        : ["--format", "json", "--base", "test-pr-base"],
+    );
+  });
+}

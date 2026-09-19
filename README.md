@@ -67,6 +67,20 @@ jobs:
 
 On a pull request the action automatically uses the PR base to report introduced
 findings. Outside PRs it scans the whole project unless `base` is supplied.
+To report existing violations across the whole repository on every PR, configure:
+
+```yaml
+- uses: dakdevs/lintrules@v1
+  with:
+    full-scan: "true"
+  env:
+    AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+```
+
+`full-scan` defaults to `false`. When enabled, it ignores both the automatic PR
+base and an explicitly supplied `base`, including when config uses
+`pr_report: "introduced"`.
+
 The workflow needs a repository secret named `AI_GATEWAY_API_KEY` for Vercel.
 Fork and Dependabot PRs cannot access this secret; our own workflow skips them.
 

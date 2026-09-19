@@ -2,7 +2,7 @@
 set -euo pipefail
 args=(--format json)
 if [[ -n "${INPUT_CONFIG:-}" ]]; then args+=(--config "$INPUT_CONFIG"); fi
-if [[ -n "${INPUT_BASE:-}" ]]; then args+=(--base "$INPUT_BASE"); fi
+if [[ "${INPUT_FULL_SCAN:-false}" != "true" && -n "${INPUT_BASE:-}" ]]; then args+=(--base "$INPUT_BASE"); fi
 if [[ -n "${INPUT_WORKING_TREE:-}" ]]; then args+=(--working-tree "$INPUT_WORKING_TREE"); fi
 if [[ "${INPUT_NO_CACHE:-false}" == "true" ]]; then args+=(--no-cache); fi
 
