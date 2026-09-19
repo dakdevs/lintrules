@@ -46,7 +46,7 @@ test("npm package runs in the consumer project without Cargo or install scripts"
   );
   expect(installed.status).toBe(0);
   const installRoot = join(directory, "lintrules");
-  expect(readFileSync(githubPath, "utf8").trim()).toBe(
+  expect(resolve(readFileSync(githubPath, "utf8").trim())).toBe(
     join(installRoot, "node_modules", ".bin"),
   );
   const cli = join(
