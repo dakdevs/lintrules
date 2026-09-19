@@ -39,7 +39,7 @@ jobs:
             exit 1
           fi
       - name: Check Rust rules
-        uses: ./
+        uses: dakdevs/lintrules@v1
         with:
           base: ${{ github.event.pull_request.base.sha || inputs.base }}
           working-tree: committed
