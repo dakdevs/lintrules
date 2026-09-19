@@ -32,14 +32,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: dtolnay/rust-toolchain@stable
+    - uses: actions/setup-node@v6
+      with:
+        node-version: "24"
     - name: Install Lintrules
       shell: bash
-      run: |
-        set -euo pipefail
-        install_root="$RUNNER_TEMP/lintrules"
-        cargo install --path "$GITHUB_ACTION_PATH/crates/lintrules" --locked --root "$install_root"
-        echo "$install_root/bin" >> "$GITHUB_PATH"
+      run: bash "$GITHUB_ACTION_PATH/scripts/install-cli.sh" "@dakdevs/lintrules@1.0.1"
     - name: Check rules
       id: check
       shell: bash

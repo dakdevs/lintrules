@@ -41,6 +41,8 @@ lintrules
 The repository root is a composite GitHub Action. It runs Lintrules once,
 converts each finding into a GitHub error annotation, and preserves the precise
 line when Jev identified one. File-level findings create file annotations.
+The action installs the pinned npm package with prebuilt native binaries; no
+Rust toolchain or compilation is needed.
 
 ```yaml
 name: Lintrules
