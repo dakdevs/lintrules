@@ -52,3 +52,30 @@ fn rules_require_a_closing_front_matter_delimiter() {
     let errors = load_rules(directory.path()).unwrap_err();
     assert!(errors[0].contains("front matter must end"));
 }
+
+#[test]
+fn repository_dogfood_rules_and_config_are_valid() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let project =
+        lintrules_core::config::discover_project(Some(&root.join("lintrules.config.json")))
+            .unwrap();
+    let rules = lintrules_core::config::load_rules(root).unwrap();
+    assert_eq!(rules.len(), 5);
+    assert!(
+        rules
+            .iter()
+            .all(|rule| !rule.title.is_empty() && !rule.globs.is_empty())
+    );
+    assert!(matches!(
+        project.config.provider,
+        lintrules_core::config::ProviderName::Vercel
+    ));
+    assert!(matches!(
+        project.config.pr_report,
+        lintrules_core::config::PrReport::Introduced
+    ));
+}

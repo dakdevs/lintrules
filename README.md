@@ -58,16 +58,19 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: dakdevs/lintrules@main
-        with:
-          base: ${{ github.event.pull_request.base.sha }}
+      - uses: dakdevs/lintrules@v1
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
 ```
 
+On a pull request the action automatically uses the PR base to report introduced
+findings. Outside PRs it scans the whole project unless `base` is supplied.
+The workflow needs a repository secret named `AI_GATEWAY_API_KEY` for Vercel.
+Fork and Dependabot PRs cannot access this secret; our own workflow skips them.
+
 Set `fail-on-findings: "false"` to keep annotations while allowing the job to
-succeed. Use a release tag such as `dakdevs/lintrules@v1.0.0` once a release
-exists instead of tracking `main`.
+succeed. Pin an immutable action release or commit SHA for reproducible runs.
+The `v1` tag tracks compatible action updates.
 
 ## Releases
 
@@ -141,3 +144,22 @@ fails on violations, inconclusive checks, or incomplete provider calls.
 Jev has a finite context window. Lintrules never truncates source invisibly:
 when complete per-file or cross-file source cannot fit the configured
 `max_context_chars`, it reports an incomplete check rather than a false pass.
+
+## Dogfooding
+
+This repository uses five `.lintrules/*.md` rules converted from rust-router's
+Default Project Settings: edition 2024, a declared minimum Rust version of at
+least 1.85, unsafe-code diagnostics, and the Clippy all and pedantic groups.
+Workspace inheritance is accepted. The router's assistant reasoning and skill
+selection instructions are not source-code requirements and were not copied
+into semantic checks.
+
+The Lintrules workflow runs on same-repository PRs and reports introduced
+findings with annotations. Run it manually with an empty `base` to audit all
+existing code. Reports are saved as workflow artifacts, including failed scans.
+
+The public root `action.yml` makes `uses: dakdevs/lintrules@v1` available
+directly; Marketplace listing is optional for installation. To list the action,
+edit its GitHub release, select **Publish this Action to the GitHub Marketplace**,
+accept the Marketplace developer agreement if prompted, and choose a category.
+See [GitHub's publishing instructions](https://docs.github.com/en/actions/how-tos/create-and-publish-actions/publish-in-github-marketplace).

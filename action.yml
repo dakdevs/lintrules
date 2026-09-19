@@ -1,6 +1,9 @@
 name: Lintrules
 description: Run Lintrules and publish semantic-rule findings as GitHub annotations.
-author: Dak Devels
+author: dakdevs
+branding:
+  icon: check-circle
+  color: purple
 
 inputs:
   working-directory:
@@ -11,8 +14,9 @@ inputs:
     description: Path to lintrules.config.json, relative to the working directory.
     required: false
   base:
-    description: Git base revision used to report only introduced findings.
+    description: Git base revision used to report only introduced findings; defaults to the PR base.
     required: false
+    default: ${{ github.event.pull_request.base.sha || '' }}
   working-tree:
     description: Include or committed; overrides the matching config setting.
     required: false
@@ -45,23 +49,7 @@ runs:
         INPUT_BASE: ${{ inputs.base }}
         INPUT_WORKING_TREE: ${{ inputs.working-tree }}
         INPUT_NO_CACHE: ${{ inputs.no-cache }}
-      run: |
-        set -uo pipefail
-        args=(--format json)
-        if [[ -n "$INPUT_CONFIG" ]]; then args+=(--config "$INPUT_CONFIG"); fi
-        if [[ -n "$INPUT_BASE" ]]; then args+=(--base "$INPUT_BASE"); fi
-        if [[ -n "$INPUT_WORKING_TREE" ]]; then args+=(--working-tree "$INPUT_WORKING_TREE"); fi
-        if [[ "$INPUT_NO_CACHE" == "true" ]]; then args+=(--no-cache); fi
-
-        report="$RUNNER_TEMP/lintrules-report.json"
-        cd "$INPUT_WORKING_DIRECTORY"
-        lintrules "${args[@]}" > "$report"
-        status=$?
-
-        cat "$report"
-        echo "report=$report" >> "$GITHUB_OUTPUT"
-        echo "status=$status" >> "$GITHUB_OUTPUT"
-        exit 0
+      run: bash "$GITHUB_ACTION_PATH/scripts/check-rules.sh"
     - name: Annotate findings
       shell: bash
       env:
